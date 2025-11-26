@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YourFinder | GitHub User Search</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Space Mono for that 'Dev' feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Space Mono"', 'monospace'],
+                    },
+                    colors: {
+                        pf: {
+                            btn: '#0079FF',
+                            btnHover: '#60ABFF',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #90A4D4; 
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #1E2A47;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0079FF; 
+        }
+        
+        .loader {
+            border: 4px solid currentColor;
+            border-radius: 50%;
+            border-top: 4px solid #0079FF;
+            width: 30px;
+            height: 30px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+            display: none;
+            opacity: 0.5;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#F6F8FF] dark:bg-[#141D2F] text-[#2B3442] dark:text-white min-h-screen flex items-center justify-center p-4 md:p-6 font-sans antialiased transition-colors duration-300 overflow-y-auto">
+
+    <div class="w-full max-w-[730px] my-4 md:my-10">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 md:mb-9">
+            <h1 class="text-xl md:text-2xl font-bold tracking-wide text-[#2B3442] dark:text-white transition-colors duration-300">YourFinder</h1>
+            
+            <!-- Theme Toggle Button -->
+            <button id="themeBtn" class="flex items-center gap-4 text-[#2B3442] dark:text-white hover:text-[#222731] dark:hover:text-[#90A4D4] transition-colors tracking-[2.5px] font-bold text-xs uppercase cursor-pointer group">
+                <span id="themeText">LIGHT</span>
+                <i id="themeIcon" data-lucide="sun" class="w-5 h-5 fill-current"></i>
+            </button>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="bg-[#FEFEFE] dark:bg-[#1E2A47] rounded-[15px] p-2.5 mb-6 shadow-xl dark:shadow-none flex items-center gap-2 sm:gap-4 relative transition-colors duration-300">
+            <i data-lucide="search" class="w-6 h-6 text-pf-btn ml-2 sm:ml-4"></i>
+            <input 
+                type="text" 
+                id="searchInput"
+                placeholder="Search GitHub username..." 
+                class="flex-1 bg-transparent border-none outline-none text-[#2B3442] dark:text-white placeholder-gray-500 dark:placeholder-white/70 text-base sm:text-lg caret-pf-btn truncate transition-colors duration-300"
+                autocomplete="off"
+            >
+            <span id="errorMsg" class="text-red-500 font-bold text-xs sm:text-sm hidden absolute right-[110px] sm:right-[130px] whitespace-nowrap">No results</span>
+            <button 
+                id="searchBtn"
+                class="bg-pf-btn hover:bg-pf-btnHover transition-colors text-white font-bold py-3 px-4 sm:px-6 rounded-[10px] text-sm sm:text-base"
+            >
+                Search
+            </button>
+        </div>
+
+        <!-- Main Content Card -->
+        <main class="bg-[#FEFEFE] dark:bg-[#1E2A47] rounded-[15px] p-5 sm:p-12 shadow-xl dark:shadow-none relative min-h-[200px] transition-colors duration-300">
+            
+            <!-- Loading State -->
+            <div id="loading" class="absolute inset-0 flex items-center justify-center bg-[#FEFEFE]/80 dark:bg-[#1E2A47]/80 z-10 hidden rounded-[15px] transition-colors duration-300">
+                <div class="loader block text-[#2B3442] dark:text-white"></div>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profileContent" class="hidden animate-fade-in">
+                <div class="flex flex-col lg:flex-row gap-4 sm:gap-9">
+                    <!-- Avatar (Mobile: Top Left, Desktop: Left Column) -->
+                    <div class="hidden lg:block">
+                        <img id="avatar" src="" alt="Avatar" class="w-[117px] h-[117px] rounded-full ring-2 ring-[#F6F8FF] dark:ring-[#141D2F]">
+                    </div>
+
+                    <div class="w-full">
+                        <!-- Header Section (Name, Date) -->
+                        <div class="flex items-start gap-5 mb-5 lg:mb-2">
+                            <img id="avatarMobile" src="" alt="Avatar" class="w-[70px] h-[70px] rounded-full lg:hidden ring-2 ring-[#F6F8FF] dark:ring-[#141D2F]">
+                            
+                            <div class="flex-1 flex flex-col lg:flex-row lg:justify-between lg:items-start">
+                                <div>
+                                    <h2 id="name" class="text-xl sm:text-2xl font-bold text-[#2B3442] dark:text-white transition-colors duration-300">The Octocat</h2>
+                                    <a id="login" href="#" target="_blank" class="text-pf-btn text-sm sm:text-base mt-1 block hover:underline">@octocat</a>
+                                </div>
+                                <p id="joined" class="text-[#2B3442] dark:text-white/70 text-sm sm:text-[15px] mt-2 lg:mt-2">Joined 25 Jan 2011</p>
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        <p id="bio" class="text-[#2B3442] dark:text-[#cbd5e1] text-[13px] sm:text-[15px] leading-[25px] mb-8 lg:-ml-2 transition-colors duration-300">
+                            This profile has no bio
+                        </p>
+
+                        <!-- Stats Box -->
+                        <div class="bg-[#F6F8FF] dark:bg-[#141D2F] rounded-[10px] py-4 px-4 sm:px-8 flex justify-between mb-8 lg:-ml-2 transition-colors duration-300">
+                            <div class="flex flex-col gap-1 text-center sm:text-left">
+                                <span class="text-[11px] sm:text-[13px] text-[#2B3442] dark:text-[#cbd5e1]">Repos</span>
+                                <span id="repos" class="text-lg sm:text-xl font-bold text-[#2B3442] dark:text-white">8</span>
+                            </div>
+                            <div class="flex flex-col gap-1 text-center sm:text-left">
+                                <span class="text-[11px] sm:text-[13px] text-[#2B3442] dark:text-[#cbd5e1]">Followers</span>
+                                <span id="followers" class="text-lg sm:text-xl font-bold text-[#2B3442] dark:text-white">3938</span>
+                            </div>
+                            <div class="flex flex-col gap-1 text-center sm:text-left">
+                                <span class="text-[11px] sm:text-[13px] text-[#2B3442] dark:text-[#cbd5e1]">Following</span>
+                                <span id="following" class="text-lg sm:text-xl font-bold text-[#2B3442] dark:text-white">9</span>
+                            </div>
+                        </div>
+
+                        <!-- Social Links Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-4 lg:-ml-2 text-sm sm:text-[15px]">
+                            
+                            <div class="flex items-center gap-4 text-[#2B3442] dark:text-white fill-current group transition-colors duration-300">
+                                <i data-lucide="map-pin" class="w-5 h-5 flex-shrink-0"></i>
+                                <span id="location" class="truncate">San Francisco</span>
+                            </div>
+
+                            <div class="flex items-center gap-4 text-[#2B3442] dark:text-white fill-current group transition-colors duration-300">
+                                <i data-lucide="twitter" class="w-5 h-5 flex-shrink-0"></i>
+                                <a id="twitter" href="#" class="truncate hover:underline text-gray-400 pointer-events-none">Not Available</a>
+                            </div>
+
+                            <div class="flex items-center gap-4 text-[#2B3442] dark:text-white fill-current group transition-colors duration-300">
+                                <i data-lucide="link" class="w-5 h-5 flex-shrink-0"></i>
+                                <a id="website" href="#" target="_blank" class="truncate hover:underline">https://github.blog</a>
+                            </div>
+
+                            <div class="flex items-center gap-4 text-[#2B3442] dark:text-white fill-current group transition-colors duration-300">
+                                <i data-lucide="building-2" class="w-5 h-5 flex-shrink-0"></i>
+                                <span id="company" class="truncate">@github</span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Repositories Section -->
+                <div id="reposSection" class="mt-8 pt-8 border-t border-[#90A4D4]/30 dark:border-white/10 hidden">
+                    <h3 class="text-xl font-bold mb-6 text-[#2B3442] dark:text-white">Latest Repositories</h3>
+                    <div id="reposList" class="grid grid-cols-1 gap-4">
+                        <!-- Repos will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Welcome/Initial State -->
+            <div id="welcomeMsg" class="text-center py-10">
+                <div class="inline-block p-4 rounded-full bg-[#F6F8FF] dark:bg-[#141D2F] mb-4 transition-colors duration-300">
+                    <i data-lucide="github" class="w-12 h-12 text-pf-btn"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2 text-[#2B3442] dark:text-white">Welcome to YourFinder</h3>
+                <p class="text-[#2B3442] dark:text-[#cbd5e1] max-w-sm mx-auto">Enter a GitHub username above to instantly view their profile details.</p>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const loading = document.getElementById('loading');
+        const profileContent = document.getElementById('profileContent');
+        const welcomeMsg = document.getElementById('welcomeMsg');
+        const reposSection = document.getElementById('reposSection');
+        const reposList = document.getElementById('reposList');
+        
+        // Theme Elements
+        const themeBtn = document.getElementById('themeBtn');
+        const themeText = document.getElementById('themeText');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+
+        // Profile Fields
+        const avatar = document.getElementById('avatar');
+        const avatarMobile = document.getElementById('avatarMobile');
+        const nameEl = document.getElementById('name');
+        const loginEl = document.getElementById('login');
+        const joinedEl = document.getElementById('joined');
+        const bioEl = document.getElementById('bio');
+        const reposEl = document.getElementById('repos');
+        const followersEl = document.getElementById('followers');
+        const followingEl = document.getElementById('following');
+        const locationEl = document.getElementById('location');
+        const websiteEl = document.getElementById('website');
+        const twitterEl = document.getElementById('twitter');
+        const companyEl = document.getElementById('company');
+
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // Constants
+        const API_URL = 'https://api.github.com/users/';
+        const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Theme Logic
+        function updateThemeUI(isDark) {
+            if (isDark) {
+                themeText.innerText = "LIGHT";
+                themeIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                themeText.innerText = "DARK";
+                themeIcon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        themeBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            updateThemeUI(isDark);
+        });
+
+        // Initialize Theme (Default to Dark)
+        updateThemeUI(true);
+
+
+        // Helpers
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `Joined ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+        }
+
+        function checkNull(value, el, isLink = false, type = '') {
+            if (value === "" || value === null) {
+                el.style.opacity = 0.5;
+                if(isLink) {
+                    el.classList.add('pointer-events-none', 'text-gray-400', 'dark:text-gray-500');
+                    el.href = '#';
+                    el.innerText = 'Not Available';
+                } else {
+                    el.innerText = 'Not Available';
+                }
+                return;
+            }
+
+            el.style.opacity = 1;
+            if (isLink) {
+                el.classList.remove('pointer-events-none', 'text-gray-400', 'dark:text-gray-500');
+                if (type === 'twitter') {
+                    el.href = `https://twitter.com/${value}`;
+                    el.innerText = `@${value}`;
+                } else if (type === 'website') {
+                    const url = value.startsWith('http') ? value : `https://${value}`;
+                    el.href = url;
+                    el.innerText = value;
+                }
+            } else {
+                el.innerText = value;
+            }
+        }
+
+        // Fetch User Data
+        async function getUser(username) {
+            // Reset UI
+            errorMsg.classList.add('hidden');
+            welcomeMsg.classList.add('hidden');
+            profileContent.classList.add('hidden');
+            loading.style.display = 'flex'; 
+
+            try {
+                const response = await fetch(API_URL + username);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    loading.style.display = 'none';
+                    errorMsg.classList.remove('hidden');
+                    return; 
+                }
+
+                renderProfile(data);
+                // After rendering profile, fetch repos
+                getRepos(username);
+
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                loading.style.display = 'none';
+                alert('Network error or API limit reached. Please try again later.');
+            }
+        }
+
+        // Fetch Repos Data
+        async function getRepos(username) {
+            try {
+                // Fetching latest 10 repos sorted by updated
+                const response = await fetch(API_URL + username + '/repos?sort=updated&per_page=10');
+                const repos = await response.json();
+
+                renderRepos(repos);
+            } catch (error) {
+                console.error('Error fetching repos:', error);
+            }
+        }
+
+        function renderRepos(repos) {
+            reposList.innerHTML = ''; // Clear previous repos
+            
+            if (repos.length === 0) {
+                reposSection.classList.add('hidden');
+                return;
+            }
+
+            reposSection.classList.remove('hidden');
+
+            repos.forEach(repo => {
+                const repoEl = document.createElement('div');
+                repoEl.classList.add('bg-[#F6F8FF]', 'dark:bg-[#141D2F]', 'p-4', 'rounded-[10px]', 'hover:bg-[#EAEFFD]', 'dark:hover:bg-[#1e2a47]', 'transition-colors', 'duration-200');
+                
+                repoEl.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <a href="${repo.html_url}" target="_blank" class="text-[#2B3442] dark:text-white font-bold text-base hover:text-pf-btn truncate pr-2">${repo.name}</a>
+                        <span class="text-xs bg-[#FEFEFE] dark:bg-[#1E2A47] text-[#2B3442] dark:text-white px-2 py-1 rounded border border-gray-200 dark:border-gray-700 whitespace-nowrap">${repo.visibility}</span>
+                    </div>
+                    <p class="text-[#4B6A9B] dark:text-[#cbd5e1] text-xs mb-4 line-clamp-2 min-h-[32px]">${repo.description || 'No description available'}</p>
+                    <div class="flex items-center justify-between text-[#4B6A9B] dark:text-[#cbd5e1] text-xs">
+                        <div class="flex items-center gap-4">
+                            ${repo.language ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>${repo.language}</span>` : ''}
+                            <span class="flex items-center gap-1"><i class="w-3 h-3" data-lucide="star"></i> ${repo.stargazers_count}</span>
+                            <span class="flex items-center gap-1"><i class="w-3 h-3" data-lucide="git-fork"></i> ${repo.forks_count}</span>
+                        </div>
+                        <span class="text-[10px]">${new Date(repo.updated_at).toLocaleDateString()}</span>
+                    </div>
+                `;
+                reposList.appendChild(repoEl);
+            });
+            
+            lucide.createIcons(); // Refresh icons for new elements
+            loading.style.display = 'none';
+            profileContent.classList.remove('hidden');
+        }
+
+        // Render Data
+        function renderProfile(user) {
+            // Images
+            avatar.src = user.avatar_url;
+            avatarMobile.src = user.avatar_url;
+
+            // Header Info
+            nameEl.innerText = user.name || user.login;
+            loginEl.innerText = `@${user.login}`;
+            loginEl.href = user.html_url;
+            joinedEl.innerText = formatDate(user.created_at);
+
+            // Bio
+            if (user.bio) {
+                bioEl.innerText = user.bio;
+                bioEl.style.opacity = 1;
+            } else {
+                bioEl.innerText = 'This profile has no bio';
+                bioEl.style.opacity = 0.75;
+            }
+
+            // Stats
+            reposEl.innerText = user.public_repos;
+            followersEl.innerText = user.followers;
+            followingEl.innerText = user.following;
+
+            // Links & Details
+            checkNull(user.location, locationEl);
+            checkNull(user.blog, websiteEl, true, 'website');
+            checkNull(user.twitter_username, twitterEl, true, 'twitter');
+            checkNull(user.company, companyEl);
+        }
+
+        // Event Listeners
+        searchBtn.addEventListener('click', () => {
+            const user = searchInput.value.trim();
+            if (user) getUser(user);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const user = searchInput.value.trim();
+                if (user) getUser(user);
+            }
+        });
+
+        // Search Input Focus clear error
+        searchInput.addEventListener('input', () => {
+            errorMsg.classList.add('hidden');
+        });
+
+    </script>
+</body>
+</html>
